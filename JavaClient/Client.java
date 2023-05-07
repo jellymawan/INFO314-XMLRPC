@@ -16,9 +16,30 @@ public class Client {
     static String host = "";
     static int port = 0;
 
-    public static void main(String... args) throws Exception {
+    public static void main(String... args) throws Exception{
         host = args[0];
         port = Integer.valueOf(args[1]);
+
+        try{
+            add(Integer.MAX_VALUE, Integer.MAX_VALUE);
+        }catch(Exception e) {
+            throw new ArithmeticException("Overflow!");
+        }
+        try {
+            multiply(Integer.MAX_VALUE, Integer.MAX_VALUE);
+        }catch(Exception e) {
+            throw new ArithmeticException("Overflow!");
+        }
+        // try {
+        //     subtract("hi", "bye"); //won't even compile
+        // }catch(Exception e) {
+        //     throw new IllegalArgumentException("Can't subtract Strings");
+        // }
+        try {
+            divide(1, 0);
+        }catch(Exception e) {
+            throw new ArithmeticException("Divide by zero");
+        }
 
         System.out.println(add() == 0);
         System.out.println(add(1, 2, 3, 4, 5) == 15);
@@ -33,7 +54,7 @@ public class Client {
         return sendRequest("add", lhs, rhs);
     }
     public static int add(Integer... params) throws Exception {
-        return sendRequest("add", params);
+        return sendRequest("add", (Object[])params);
     }
     public static int subtract(int lhs, int rhs) throws Exception {
         return sendRequest("subtract",  lhs, rhs);
@@ -42,7 +63,7 @@ public class Client {
         return sendRequest("multiply", lhs, rhs);
     }
     public static int multiply(Integer... params) throws Exception {
-        return sendRequest("multiply", params);
+        return sendRequest("multiply", (Object[])params);
     }
     public static int divide(int lhs, int rhs) throws Exception {
         return sendRequest("divide",  lhs, rhs);
@@ -51,29 +72,37 @@ public class Client {
         return sendRequest("modulo",  lhs, rhs);
     }
 
-
     public static int sendRequest(String methodName, Object... arguments) throws Exception{
-        //Create instance of client
+        //CREATE INSTANCE OF CLIENT
         HttpClient client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
 
-        //Create request body
+        //CREATE REQUEST BODY
         String parameters = "<params>";
         for (Object param: arguments) {
-            parameters += "<param><value><id>" + param + "</i4></value></param>";
+            parameters += "<param><value><i4>" + param + "</i4></value></param>";
         }
         parameters += "</params>";
 
-        String requestBody = "<?xml version='1.-'?><methodCall><methodName>" + methodName + parameters + "</methodName></methodCall>";
+        String requestBody = "<?xml version=\"1.0\"?><methodCall><methodName>" + methodName + parameters + "</methodName></methodCall>";
 
-        //send request
+        //SEND REQUEST
         HttpRequest request = HttpRequest.newBuilder()
         .uri(URI.create("http://" + host + ":" + port))
         .POST(HttpRequest.BodyPublishers.ofString(requestBody))
         .header("Content-Type", "text/xml")
         .build();
-
+        
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-        return Integer.parseInt(response.body());
+        String responseBody = response.body();
+        String answer = Integer.MIN_VALUE + "";
+        try{
+            answer = responseBody.substring(responseBody.indexOf("<i4>") + 4, responseBody.indexOf("</i4>"));
+        }catch (Exception e) {
+            System.out.println(response.statusCode());
+            System.out.println(response.body());
+        }
+
+        return Integer.parseInt(answer);
     }
 }
